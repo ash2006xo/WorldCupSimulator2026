@@ -1,2 +1,2 @@
 # WorldCupSimulator2026
-an application for pretending the games
+an application for predicting the games in worlcup
