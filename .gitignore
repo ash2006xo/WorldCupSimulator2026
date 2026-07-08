@@ -1,13 +1,19 @@
-__pycache__/
-*.pyc
-
+# Virtual environment
 .venv/
-venv/
 
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Distribution
+build/
+dist/
+*.egg-info/
+
+# IDEs
 .vscode/
-
 .idea/
 
+# OS
 .DS_Store
-
-Thumbs.db
