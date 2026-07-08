@@ -282,9 +282,116 @@ class Match:
         return result
         
 # ==================== GROUP CLASS ===========================
+class Group:
+    """
+    Represents a World Cup group containing four teams.
 
+    A Group is responsible for managing the group-stage matches,
+    ranking the teams based on the tournament rules, and determining
+    which two teams advance to the knockout stage.
+    """
+    def __init__(self, name: str, teams: list[Team]) -> None:
+        """
+        Initializes a Group object.
 
-# ==================== NOCKOUT STAGE CLASS ===================
+        Args:
+            name (str): The name of the group (e.g., "A", "B", ..., "H").
+        """
+        if len(teams) != 4:
+            raise ValueError("A group must contain exactly four teams.")
+        
+        self.name = name
+        self.teams = teams
+        self.matches = []
+
+        for team in self.teams:
+            team.group = self.name
+            
+    def play_all_matches(self)-> None:
+        """
+        Plays every match in the group.
+
+        Each team plays exactly one match against every
+        other team, resulting in six matches.
+        """
+        self.matches.clear()
+         
+        # Each team plays with the team after it    
+        for i in range(len(self.teams)):
+            for j in range(i + 1, len(self.teams)):
+                match = Match(self.teams[i], self.teams[j])
+                    
+                match.play()
+                self.matches.append(match)
+            
+    def get_ranking(self)-> list[Team]:
+        """
+        Returns the teams ranked from first to fourth.
+
+        Teams are ranked by:
+        1. Points
+        2. Goal difference
+        3. Goals scored
+        4. Random draw if still tied
+        """
+        # Sort the teams according to the World Cup ranking rules.
+        ranking = sorted(
+            self.teams,
+            key=lambda team:(
+                team.points,
+                team.goal_difference(),
+                team.goals_for
+            ),
+            reverse=True   # Higher values should come first.
+        ) 
+            
+        # Check for teams that are still completely tied after sorting
+        for i in range(len(ranking) - 1):   # We compare each team with the one after it (i + 1), so stopping one position early prevents an IndexError.
+            current = ranking[i]
+            next_team = ranking[i + 1]
+
+            if (
+                current.points == next_team.points
+                and current.goal_difference() == next_team.goal_difference()
+                and current.goals_for == next_team.goals_for
+            ):
+                # Perform a random draw with a 50% chance, if True is selected, swap the two teams.
+                if random.choice([True, False]):
+                    ranking[i], ranking[i + 1] = ranking[i + 1], ranking[i]
+
+        return ranking      
+        
+    def advance_teams(self)-> tuple[Team, Team]:
+        """
+        Returns the two teams that advance to the knockout stage.
+
+        Returns:
+        tuple[Team, Team]: The first-place and second-place teams.
+        """
+        ranking = self.get_ranking()
+        
+        first_team = ranking[0]
+        second_team = ranking[1]
+        
+        return first_team, second_team
+    
+    def __str__(self)-> str:
+        """ Returns a readable string representation of the group standings. """
+        ranking = self.get_ranking()
+
+        result = f"\n========== Group {self.name} ==========\n"
+        # Display each team's position and statistics.
+        for position, team in enumerate(ranking, start=1):
+            result += (
+                f"{position}. {team.name:<15}"
+                f"Pts: {team.points:<2} | "
+                f"GD: {team.goal_difference():+3} | "
+                f"GF: {team.goals_for}\n"
+            )
+
+        return result
+            
+# ==================== KNOCKOUT STAGE CLASS ===================
 
 
 # ============== WORLD CUP SIMULATOR CLASS ===================
@@ -293,3 +400,17 @@ class Match:
 # ===================== MAIN FUNCTION ========================
 
 # =============   TEST(temp)
+if __name__ == "__main__":
+
+    brazil = Team("Brazil", 95, 90, 1)
+    france = Team("France", 92, 89, 2)
+    japan = Team("Japan", 80, 82, 18)
+    mexico = Team("Mexico", 81, 80, 15)
+
+    group = Group("A", [brazil, france, japan, mexico])
+
+    group.play_all_matches()
+    for match in group.matches:
+        print(match)
+
+    print(group)
