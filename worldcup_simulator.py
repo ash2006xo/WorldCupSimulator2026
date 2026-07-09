@@ -392,25 +392,164 @@ class Group:
         return result
             
 # ==================== KNOCKOUT STAGE CLASS ===================
+class KnockoutStage:
+    """
+    Represents one knockout round of the World Cup.
 
+    A KnockoutStage object contains all matches for a
+    specific round (e.g., Round of 16, Quarter-finals,
+    Semi-finals, or Final).
+    """
+    def __init__(self, round_name: str, matches: list[Match])-> None:
+        """
+        Initializes a knockout stage.
+
+        Args:
+            round_name (str): Name of the knockout round.
+            matches (list[Match]): List of matches in this round.
+        """
+        self.round_name = round_name
+        self.matches = matches
+        
+    def play_round(self)-> None:
+        """ Plays every match in the current knockout round. """
+        for match in self.matches:
+            match.play()
+            
+    def get_winners(self)-> list[Team]:
+        """
+        Returns the winners of all matches in the current round.
+
+        Returns:
+            list[Team]: Teams that advance to the next round.
+        """
+        winners = []
+
+        for match in self.matches:
+            winners.append(match.winner)
+
+        return winners
+        
+    def display_results(self)-> None:
+        """ Displays the results of every match in the current round. """
+        print(f"\n========== {self.round_name} ==========")
+        
+        for match in self.matches:
+            print(match)
 
 # ============== WORLD CUP SIMULATOR CLASS ===================
+class WorldCupSimulator:
+    """
+    Main simulator class for the worldcup.
+    Manages the entire tournament cycle: 
+    loading teams, group seeding snd draws,
+    group stage, knockout stagec, and repeated simulations
+    """
+    KNOCKOUT_PAIRS = []
+    def __init__(self)-> None:
+        """ Initializes an empty tournament. """
+        self.teams = []
+        self.seeds = []
+        self.groups = []
+        self.qualified_teams = []
+        self.champion = None
+    
+    def load_teams_from_csv(self, filename: str) -> None:
+        """
+        Loads all teams from the CSV file.
 
+        Args:
+        filename (str): Path to the team data file.
+        """
+        self.teams.clear()
+        
+        try:
+            with open(filename,  "r", encoding="utf-8") as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    name = row["name"]
+                    attack = int(row["attack"])
+                    defense = int(row["defense"])
+                    rank = int(row["rank"])
+                    
+                    team = Team(name, attack, defense, rank)
+                    self.teams.append(team)
+                if len(self.teams) != 32:
+                    raise ValueError("Tournament must contain exactly 32 teams.")
+                
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File '{filename}' was not found.")
+
+        except KeyError as error:
+            raise KeyError(f"Missing column in file: {error}")
+
+        except ValueError as error:
+            raise ValueError(f"Invalid data in file: {error}")
+    
+    def create_seeds(self) -> None:
+        """
+        Sort teams by FIFA ranking and divide them
+        into four seeds.
+        """
+        self.seeds.clear()
+        # Sort teams by FIFA ranking.
+        self.teams.sort(key=lambda team: team.rank)
+
+        # Create four seeds, each containing eight teams.
+        for i in range(0, len(self.teams), 8):
+            seed = self.teams[i:i + 8]
+            self.seeds.append(seed)
+            
+    def draw_groups(self) -> None:
+        """
+        Randomly draws the teams into eight World Cup groups.
+        Each group receives exactly one team from each seeds.
+        """
+        self.groups.clear()
+
+        # Create Groups.
+        for name in "ABCDEFGH":
+            self.groups.append(Group(name))
+
+        # Process each seed.
+        for seed in self.seeds:
+            random.shuffle(seed)
+            # Give one team from the current seed to each group.
+            for index, team in enumerate(seed):
+                self.groups[index].add_team(team)
+                team.group = self.groups[index].name    
+
+    def run_group_stage(self)-> None:
+        """ Simulate all matches in the World Cup group stage. """
+        for group in self.groups:
+            group.play_all_matches()
+        
+    def get_qualified_teams(self) -> None:
+        """ Collect the top two teams from every group and store them for the knockout stage. """
+        self.qualified_teams.clear()
+
+        for group in self.groups:
+            first_team, second_team = group.advance_teams()
+            self.qualified_teams.append(first_team)
+            self.qualified_teams.append(second_team)    
+            
+    def setup_knockout_bracket(self)->None:
+        pass
+    
+    def run_knockout_stage():
+        """ Simulate all knockout rounds and determine the champion. """
+        pass
+    
+    def run_full_simulation(self):
+        pass
+    
+    def most_likely_champion(self, num_simulations=1000):
+        pass
+    
+    def display_bracket(self):
+        pass
+    
 
 # ===================== MAIN FUNCTION ========================
 
 # =============   TEST(temp)
-if __name__ == "__main__":
-
-    brazil = Team("Brazil", 95, 90, 1)
-    france = Team("France", 92, 89, 2)
-    japan = Team("Japan", 80, 82, 18)
-    mexico = Team("Mexico", 81, 80, 15)
-
-    group = Group("A", [brazil, france, japan, mexico])
-
-    group.play_all_matches()
-    for match in group.matches:
-        print(match)
-
-    print(group)
