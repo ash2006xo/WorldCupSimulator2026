@@ -1,5 +1,5 @@
 # World Cup Simulator 2026
-an application for predicting the games in worlcup
+an application for predicting the WorldCup games 
 
 Final Project for Advanced Programming
 
