@@ -24,6 +24,7 @@ Main Features:
 import math
 import csv
 import random
+import os
 
 import numpy as np
 import pandas as pd
@@ -445,22 +446,33 @@ class WorldCupSimulator:
     loading teams, group seeding snd draws,
     group stage, knockout stagec, and repeated simulations
     """
-    KNOCKOUT_PAIRS = []
+    KNOCKOUT_PAIRS = [
+        ("A",1,"B",2), ("C",1,"D",2), ("E",1,"F",2), ("G",1,"H",2)
+        ("B",1,"A",2), ("D",1,"C",2), ("F",1,"E",2), ("H",1,"G",2)
+    ]
+    
     def __init__(self)-> None:
-        """ Initializes an empty tournament. """
         self.teams = []
-        self.seeds = []
         self.groups = []
-        self.qualified_teams = []
+        self.round_of_16 = None
+        self.quarterfinals = None
+        self.semifinals =  None
+        self.final = None
         self.champion = None
     
-    def load_teams_from_csv(self, filename: str) -> None:
+    def load_teams_from_csv(self, filename: str)-> None:
         """
         Loads all teams from the CSV file.
 
         Args:
-        filename (str): Path to the team data file.
+            filename (str): Path to the team data file.
+            
+        Returns:
+            bool: True on success, False if the file is missing or malformed
         """
+        if not os.path.exists(filename):
+            print(f"Error: file'{filename}'not found")
+            
         self.teams.clear()
         
         try:
@@ -524,7 +536,7 @@ class WorldCupSimulator:
         for group in self.groups:
             group.play_all_matches()
         
-    def get_qualified_teams(self) -> None:
+    def get_qualified_teams(self)-> None:
         """ Collect the top two teams from every group and store them for the knockout stage. """
         self.qualified_teams.clear()
 
@@ -534,22 +546,97 @@ class WorldCupSimulator:
             self.qualified_teams.append(second_team)    
             
     def setup_knockout_bracket(self)->None:
-        pass
-    
-    def run_knockout_stage():
+        """ Build the round-of-16 bracket followong the fixed FIFA pairing rule. """
+        advance = {group.name: group.advance_teams() for group in self.groups}
+        matches = []
+        
+        for group1,pos1,group2,pos2 in self.KNOCKOUT_PAIRS:
+            team1 = advance[group1][pos1 - 1]
+            team2 = advance[group2][pos2 - 1]
+            matches.append(Match(team1, team2, is_knockout = True))
+            
+        self.round_of_16 = KnockoutStage("Round of 16", matches)
+            
+    def run_knockout_stage(self)-> None:
         """ Simulate all knockout rounds and determine the champion. """
-        pass
+        self.round_of_16.play_round()
+        
+        qf_matches = [
+            Match(w1, w2, is_knockout = True)
+            for w1, w2 in zip(
+                self.round_of_16.get_winners()[0:2],
+                self.round_of_16.get_winners()[1:2])
+        ]            
+        self.quarterfinals = KnockoutStage("Quarterfinals", qf_matches)
+        self.quarterfinals.play_round()
+        
+        sf_matches = [
+            Match(w1, w2, is_knockout = True)
+            for w1, w2 in zip(
+                self.quarterfinals.get_winners()[0:2],
+                self.quarterfinals.get_winners()[1:2]
+            )
+        ]
+        self.semifinals = KnockoutStage("Semifinals", sf_matches)
+        self.semifinals.play_round()
+        
+        final_winners = self.semifinals.get_winners()
+        final_match = Match(final_winners[0], final_winners[1], is_knockout = True)
+        self.final = KnockoutStage("Final", [final_match])
+        self.final.play_round()
+        
+        self.champion = self.final.matches[0].winner
     
-    def run_full_simulation(self):
-        pass
+    def run_full_simulation(self)-> Team:
+        """ 
+        Runs one complete World Cup tournament.
+        
+        Returns:
+            Team: the champion of this run
+        """
+        for t in self.teams:
+            t.reset_stats()
+            
+        self.create_seeds()
+        self.draw_groups()
+        self.run_group_stage()
+        self.setup_knockout_bracket()
+        self.run_knockout_stage()
+        return self.champion
     
     def most_likely_champion(self, num_simulations=1000):
-        pass
-    
-    def display_bracket(self):
-        pass
-    
+        """
+        Runs the simulation the given number of times and repeat each
+        team's championship percentage.
 
+        Args:
+            num_simulations (int): number of simulations. Defaults to 1000.
+        """
+        if num_simulations <= 0:
+            print("Error: number of simulations must be a positive integer")
+            return
+        
+        counts = {team.name: 0 for team in self.teams}
+        for _ in range(num_simulations):
+            champ = self.run_full_simulation()
+            counts[champ.name] += 1
+            
+        print(f"Simulation ran {num_simulations} times.")
+        print("Championship percentages: ")
+        for name, count in sorted(counts.items(), key = lambda x: x[1], reverse = True):
+            if count > 0:
+                print(f"{name}: {count / num_simulations * 100:.1f}%")
+                
+    def display_bracket(self)-> None:
+        """ Displays the knockout bracket from the most recent simulation. """
+        if self.round_of_16 is None:
+            print("No simulation has been run yet.")
+            return
+        
+        print("============== Knockout Bracket ================")
+        for stage in (self.round_of_16, self.quarterfinals, self.semifinals, self.final):
+            stage.display_results()
+    
 # ===================== MAIN FUNCTION ========================
 
 # =============   TEST(temp)
