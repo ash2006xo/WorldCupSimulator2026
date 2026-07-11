@@ -447,13 +447,14 @@ class WorldCupSimulator:
     group stage, knockout stagec, and repeated simulations
     """
     KNOCKOUT_PAIRS = [
-        ("A",1,"B",2), ("C",1,"D",2), ("E",1,"F",2), ("G",1,"H",2)
+        ("A",1,"B",2), ("C",1,"D",2), ("E",1,"F",2), ("G",1,"H",2),
         ("B",1,"A",2), ("D",1,"C",2), ("F",1,"E",2), ("H",1,"G",2)
     ]
     
     def __init__(self)-> None:
         self.teams = []
         self.groups = []
+        self.seeds = []
         self.round_of_16 = None
         self.quarterfinals = None
         self.semifinals =  None
@@ -466,12 +467,10 @@ class WorldCupSimulator:
 
         Args:
             filename (str): Path to the team data file.
-            
-        Returns:
-            bool: True on success, False if the file is missing or malformed
         """
         if not os.path.exists(filename):
             print(f"Error: file'{filename}'not found")
+            return
             
         self.teams.clear()
         
@@ -519,31 +518,20 @@ class WorldCupSimulator:
         """
         self.groups.clear()
 
-        # Create Groups.
-        for name in "ABCDEFGH":
-            self.groups.append(Group(name))
-
-        # Process each seed.
+        group_names = "ABCDEFGH"
+        group_teams = {name: [] for name in group_names}
+        
+        # Process each seed, and hand one team from it to each group.
         for seed in self.seeds:
             random.shuffle(seed)
-            # Give one team from the current seed to each group.
             for index, team in enumerate(seed):
-                self.groups[index].add_team(team)
-                team.group = self.groups[index].name    
-
+                group_names = group_names[index]
+                group_teams[group_names].append(team)
+                
     def run_group_stage(self)-> None:
         """ Simulate all matches in the World Cup group stage. """
         for group in self.groups:
-            group.play_all_matches()
-        
-    def get_qualified_teams(self)-> None:
-        """ Collect the top two teams from every group and store them for the knockout stage. """
-        self.qualified_teams.clear()
-
-        for group in self.groups:
-            first_team, second_team = group.advance_teams()
-            self.qualified_teams.append(first_team)
-            self.qualified_teams.append(second_team)    
+            group.play_all_matches()  
             
     def setup_knockout_bracket(self)->None:
         """ Build the round-of-16 bracket followong the fixed FIFA pairing rule. """
@@ -564,8 +552,8 @@ class WorldCupSimulator:
         qf_matches = [
             Match(w1, w2, is_knockout = True)
             for w1, w2 in zip(
-                self.round_of_16.get_winners()[0:2],
-                self.round_of_16.get_winners()[1:2])
+                self.round_of_16.get_winners()[0::2],
+                self.round_of_16.get_winners()[1::2])
         ]            
         self.quarterfinals = KnockoutStage("Quarterfinals", qf_matches)
         self.quarterfinals.play_round()
