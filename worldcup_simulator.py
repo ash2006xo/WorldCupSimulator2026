@@ -110,7 +110,7 @@ class Team:
         """
         Updates the team's statistics after a match.
 
-        Args:
+        Args:mb,d
             goals_scored (int): Goals scored by the team.
             goals_conceded (int): Goals conceded by the team.
         """
@@ -520,13 +520,16 @@ class WorldCupSimulator:
 
         group_names = "ABCDEFGH"
         group_teams = {name: [] for name in group_names}
-        
+
         # Process each seed, and hand one team from it to each group.
         for seed in self.seeds:
             random.shuffle(seed)
+
             for index, team in enumerate(seed):
-                group_names = group_names[index]
-                group_teams[group_names].append(team)
+                # Get the name of the current group.
+                group_name = group_names[index]
+                # Add the team to that group.
+                group_teams[group_name].append(team)
                 
     def run_group_stage(self)-> None:
         """ Simulate all matches in the World Cup group stage. """
@@ -626,5 +629,72 @@ class WorldCupSimulator:
             stage.display_results()
     
 # ===================== MAIN FUNCTION ========================
-
 # =============   TEST(temp)
+def main():
+    """Temporary demo menu so we can run the whole project end-to-end and
+    confirm every stage works before polishing the real menu."""
+    sim = WorldCupSimulator()
+    groups_drawn = False
+
+    while True:
+        print("\n===== World Cup Simulator =====")
+        print("1) Load teams from CSV")
+        print("2) Draw groups (automatic seeding)")
+        print("3) Run group stage and show tables")
+        print("4) Run full tournament and show champion")
+        print("5) Run 1000-time simulation and show percentages")
+        print("6) Show last simulation's knockout bracket")
+        print("7) Exit")
+
+        choice = input("Choose an option (1-7): ").strip()
+
+        if choice == "1":
+            sim.load_teams_from_csv("worldcup_2026_teams.txt")
+        
+        elif choice == "2":
+            if not sim.teams:
+                print("Please load teams first (option 1).")
+                continue
+            sim.create_seeds()
+            sim.draw_groups()
+            groups_drawn = True
+            print("Groups drawn successfully.")
+
+        elif choice == "3":
+            if not groups_drawn:
+                print("Please draw groups first (option 2).")
+                continue
+            
+            sim.run_group_stage()
+            for group in sim.groups:
+                print(group)
+
+        elif choice == "4":
+            if not sim.teams:
+                print("Please load teams first (option 1).")
+                continue
+            champion = sim.run_full_simulation()
+            print(f"\nChampion: {champion.name}")
+
+        elif choice == "5":
+            raw = input("Number of simulations (default 1000): ").strip()
+            try:
+                num = int(raw) if raw else 1000
+            except ValueError:
+                print("Invalid number, using default 1000.")
+                num = 1000
+            sim.most_likely_champion(num)
+
+        elif choice == "6":
+            sim.display_bracket()
+
+        elif choice == "7":
+            print("Goodbye.")
+            break
+
+        else:
+            print("Invalid option, please choose 1-7.")
+
+
+if __name__ == "__main__":
+    main()
