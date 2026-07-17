@@ -21,13 +21,11 @@ Main Features:
 """
 
 # ===================== IMPORTS ==============================
-import math
 import csv
 import random
 import os
 
 import numpy as np
-import pandas as pd
 
 #===================== CONSTANTS =============================
 NUMBER_OF_TEAMS = 32
@@ -325,6 +323,24 @@ class Group:
                 match.play()
                 self.matches.append(match)
             
+    def _head_to_head_winner(self, team_a, team_b)-> None:  # Extra
+        """
+        Finds the direct group-stage match between two teams and returns
+        the team that won it.
+
+        Args:
+            team_a (Team): first team.
+            team_b (Team): second team.
+            
+        Returns:
+            Team or None: the winner of their direct match, or none if
+            the match was a draw.
+            """
+        for match in self.matches:
+            if {match.team1, match.team2} == {team_a, team_b}:
+                return match.winner
+        return None
+            
     def get_ranking(self)-> list[Team]:
         """
         Returns the teams ranked from first to fourth.
@@ -356,9 +372,19 @@ class Group:
                 and current.goal_difference() == next_team.goal_difference()
                 and current.goals_for == next_team.goals_for
             ):
-                # Perform a random draw with a 50% chance, if True is selected, swap the two teams.
-                if random.choice([True, False]):
+                head_to_head_winner = self._head_to_head_winner(current, next_team)
+                
+                if head_to_head_winner is next_team:
+                    # next_team beat current directly -> it should rank higher
                     ranking[i], ranking[i + 1] = ranking[i + 1], ranking[i]
+                    
+                elif head_to_head_winner is current:
+                    continue  # current already beat next_team directly -> order stays as is
+                
+                else:
+                    # Their direct match was also a draw -> fall back to random
+                    if random.choice([True, False]):
+                        ranking[i], ranking[i + 1] = ranking[i + 1], ranking[i]
 
         return ranking      
         
@@ -514,22 +540,24 @@ class WorldCupSimulator:
     def draw_groups(self) -> None:
         """
         Randomly draws the teams into eight World Cup groups.
-        Each group receives exactly one team from each seeds.
+        Each group receives exactly one team from each seed.
         """
         self.groups.clear()
 
         group_names = "ABCDEFGH"
         group_teams = {name: [] for name in group_names}
 
-        # Process each seed, and hand one team from it to each group.
+        # Give one team from each seed to each group
         for seed in self.seeds:
             random.shuffle(seed)
 
             for index, team in enumerate(seed):
-                # Get the name of the current group.
-                group_name = group_names[index]
-                # Add the team to that group.
-                group_teams[group_name].append(team)
+                group_teams[group_names[index]].append(team)
+
+        # Create Group objects
+        for name in group_names:
+            group = Group(name, group_teams[name])
+            self.groups.append(group)
                 
     def run_group_stage(self)-> None:
         """ Simulate all matches in the World Cup group stage. """
@@ -561,15 +589,15 @@ class WorldCupSimulator:
         self.quarterfinals = KnockoutStage("Quarterfinals", qf_matches)
         self.quarterfinals.play_round()
         
+        qf_winners = self.quarterfinals.get_winners()
+
         sf_matches = [
-            Match(w1, w2, is_knockout = True)
-            for w1, w2 in zip(
-                self.quarterfinals.get_winners()[0:2],
-                self.quarterfinals.get_winners()[1:2]
-            )
+            Match(qf_winners[0], qf_winners[1], is_knockout=True),
+            Match(qf_winners[2], qf_winners[3], is_knockout=True)
         ]
         self.semifinals = KnockoutStage("Semifinals", sf_matches)
         self.semifinals.play_round()
+        
         
         final_winners = self.semifinals.get_winners()
         final_match = Match(final_winners[0], final_winners[1], is_knockout = True)
@@ -677,6 +705,9 @@ def main():
             print(f"\nChampion: {champion.name}")
 
         elif choice == "5":
+            if not sim.teams:
+                print("Please load teams first (option 1).")
+                continue
             raw = input("Number of simulations (default 1000): ").strip()
             try:
                 num = int(raw) if raw else 1000
