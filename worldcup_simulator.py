@@ -26,6 +26,7 @@ import random
 import os
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 #===================== CONSTANTS =============================
 NUMBER_OF_TEAMS = 32
@@ -44,10 +45,6 @@ LOSS_POINTS = 0
 PENALTY_SHOTS = 5
 
 MINIMUM_LAMBDA = 0.05
-
-# =================== HELPER FUNCTIONS =======================
-
-
 
 # ===================== TEAM CLASS ===========================
 class Team:
@@ -646,6 +643,36 @@ class WorldCupSimulator:
             if count > 0:
                 print(f"{name}: {count / num_simulations * 100:.1f}%")
                 
+        self.plot_championship_chances(counts, num_simulations)
+                
+    def plot_championship_chances(self, counts: dict, num_simulations: int)-> None:  #Extra
+        """ 
+        Draws a bar chart of the top 10 teams by championship percentages
+        and saves it as an image file
+
+        Args:
+            counts (dict): mapping of team name to number of championships won.
+            num_simulations (int): total number of simulations run.
+        """
+        top_teams = sorted(counts.items(), key = lambda x: x[1], reverse = True)[:10]
+        names = [name for name, count in top_teams if count > 0]
+        percentages = [count / num_simulations * 100 for name, count in top_teams if count > 0]
+        
+        if not names:
+            print("No championship data plot.")
+            return
+        
+        plt.figure(figsize = (10,6))
+        plt.bar(names, percentages, color = "#2E7D32")
+        plt.xlabel("Team")
+        plt.ylabel("Championship Probability(%)")
+        plt.title(f"Championship Changes({num_simulations} Simulations)")
+        plt.xticks(rotation = 45, ha = "right")
+        plt.tight_layout()
+        plt.savefig("championship_chances.png")
+        plt.close()
+        print("Chart saved as championship_chances.png")
+        
     def display_bracket(self)-> None:
         """ Displays the knockout bracket from the most recent simulation. """
         if self.round_of_16 is None:
@@ -657,9 +684,8 @@ class WorldCupSimulator:
             stage.display_results()
     
 # ===================== MAIN FUNCTION ========================
-# =============   TEST(temp)
 def main():
-    """Temporary demo menu so we can run the whole project end-to-end and
+    """Temporary demo menu so we can run the whole project and
     confirm every stage works before polishing the real menu."""
     sim = WorldCupSimulator()
     groups_drawn = False
