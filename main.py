@@ -1,3 +1,25 @@
+# ============================================================  
+# Student : Narges Farhangi                         
+# Student ID : [ 404131043 ]                        
+# Project : World Cup Simulator 2026  
+# Date : 31.6.1405
+# ============================================================  
+  
+"""  
+World Cup 2026 Simulator  
+  
+This project simulates the FIFA World Cup using  
+Object-Oriented Programming.  
+  
+Main Features:  
+- Team loading  
+- Group draw  
+- Match simulation  
+- Knockout stage  
+- Tournament statistics  
+- Multiple tournament simulations  
+"""
+
 from colorama import Fore, Style, init
 import src.worldcup_simulator
 
